@@ -6,3 +6,7 @@
 3. gridsearch_rf.csv 是结果（Score 0.799）
 
 4. blending_base_models.csv 是模型融合的结果
+
+5. 个人博客与kaggle
+-https://supltz.github.io/2020/04/27/ML.html/
+-https://www.kaggle.com/liantz
