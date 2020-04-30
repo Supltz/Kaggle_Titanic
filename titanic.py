@@ -32,11 +32,7 @@ params = {
 }
 plot.rcParams.update(params)
 
-data = pd.read_csv(r"F:\大学学习资料\ML\train.csv")
-
-data['Age'] = data['Age'].fillna(data['Age'].median())
-
-data['Died'] = 1 - data['Survived']
+data = pd.read_csv("train.csv")
 
 def get_combined_data():
     # reading train data
@@ -118,48 +114,20 @@ combined = get_titles()
 #     # a function that fills the missing values of the Age variable
 #     combined['Age'] = combined.apply(lambda row: fill_age(row) if np.isnan(row['Age']) else row['Age'], axis=1)
 #     return combined
+# =========
 # =============================================================================
-def fill_ndarray(t1):
-    for i in range(t1.shape[1]):  # 遍历每一列（每一列中的nan替换成该列的均值）
-        temp_col = t1[:, i]  # 当前的一列
-        nan_num = np.count_nonzero(temp_col != temp_col)
-        if nan_num != 0:  # 不为0，说明当前这一列中有nan
-            temp_not_nan_col = temp_col[temp_col == temp_col]  # 去掉nan的ndarray
- 
-            # 选中当前为nan的位置，把值赋值为不为nan的均值
-            temp_col[np.isnan(temp_col)] = temp_not_nan_col.mean()  # mean()表示求均值。
-    return t1
-def process_age(df):
-    
-    # 把已有的数值型特征取出来丢进Random Forest Regressor中
-    age_df = df[['Age','Fare', 'Parch', 'SibSp', 'Pclass']]
+# def fill_ndarray(t1):
+#     for i in range(t1.shape[1]):  # 遍历每一列（每一列中的nan替换成该列的均值）
+#         temp_col = t1[:, i]  # 当前的一列
+#         nan_num = np.count_nonzero(temp_col != temp_col)
+#         if nan_num != 0:  # 不为0，说明当前这一列中有nan
+#             temp_not_nan_col = temp_col[temp_col == temp_col]  # 去掉nan的ndarray
+#  
+#             # 选中当前为nan的位置，把值赋值为不为nan的均值
+#             temp_col[np.isnan(temp_col)] = temp_not_nan_col.mean()  # mean()表示求均值。
+#     return t1
+# =============================================================================
 
-    # 乘客分成已知年龄和未知年龄两部分
-    known_age = age_df[age_df.Age.notnull()].iloc[:,:].values
-    unknown_age = age_df[age_df.Age.isnull()].iloc[:,:].values
-
-    # y即目标年龄
-    y = known_age[:, 0]
-
-    # X即特征属性值
-    X = known_age[:, 1:]
-
-    X=fill_ndarray(X)
-
-    # fit到RandomForestRegressor之中
-    rfr = RandomForestRegressor(random_state=0, n_estimators=2000, n_jobs=-1)
-    rfr.fit(X, y)
-    
-    # 用得到的模型进行未知年龄结果预测
-    predictedAges = rfr.predict(unknown_age[:, 1::])
-    
-    # 用得到的预测结果填补原缺失数据
-    df.loc[ (df.Age.isnull()), 'Age' ] = predictedAges 
-    
-    return df
-
-
-combined = process_age(combined)
 
 
 
@@ -187,6 +155,39 @@ def process_fares():
     return combined
 
 combined = process_fares()
+
+
+
+
+def process_age(df):
+    
+    # 把已有的数值型特征取出来丢进Random Forest Regressor中
+    age_df = df[['Age','Fare', 'Parch', 'SibSp', 'Pclass']]
+
+    # 乘客分成已知年龄和未知年龄两部分
+    known_age = age_df[age_df.Age.notnull()].iloc[:,:].values
+    unknown_age = age_df[age_df.Age.isnull()].iloc[:,:].values
+
+    # y即目标年龄
+    y = known_age[:, 0]
+
+    # X即特征属性值
+    X = known_age[:, 1:]
+
+    # fit到RandomForestRegressor之中
+    rfr = RandomForestRegressor(random_state=0, n_estimators=2000, n_jobs=-1)
+    rfr.fit(X, y)
+    
+    # 用得到的模型进行未知年龄结果预测
+    predictedAges = rfr.predict(unknown_age[:, 1::])
+    
+    # 用得到的预测结果填补原缺失数据
+    df.loc[ (df.Age.isnull()), 'Age' ] = predictedAges 
+    
+    return df
+
+
+combined = process_age(combined)
 
 def process_embarked():
     global combined
