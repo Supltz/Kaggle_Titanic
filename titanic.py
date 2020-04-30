@@ -54,14 +54,11 @@ def get_combined_data():
     
     return combined
 
-combined = get_combined_data()
+
 
 titles = set()
 for name in data['Name']:
     titles.add(name.split(',')[1].split('.')[0].strip())
-    
-    
-
 Title_Dictionary = {
     "Capt": "Officer",
     "Col": "Officer",
@@ -91,48 +88,6 @@ def get_titles():
     combined['Title'] = combined.Title.map(Title_Dictionary)
     return combined
 
-combined = get_titles()
-
-
-
-# =============================================================================
-# grouped_train = combined.iloc[:891].groupby(['Sex','Pclass','Title'])
-# grouped_median_train = grouped_train.median()
-# grouped_median_train = grouped_median_train.reset_index()[['Sex', 'Pclass', 'Title', 'Age']]
-#     
-# def fill_age(row):
-#     condition = (
-#         (grouped_median_train['Sex'] == row['Sex']) & 
-#         (grouped_median_train['Title'] == row['Title']) & 
-#         (grouped_median_train['Pclass'] == row['Pclass'])
-#     ) 
-#     return grouped_median_train[condition]['Age'].values[0]
-# 
-# 
-# def process_age():
-#     global combined
-#     # a function that fills the missing values of the Age variable
-#     combined['Age'] = combined.apply(lambda row: fill_age(row) if np.isnan(row['Age']) else row['Age'], axis=1)
-#     return combined
-# =========
-# =============================================================================
-# def fill_ndarray(t1):
-#     for i in range(t1.shape[1]):  # 遍历每一列（每一列中的nan替换成该列的均值）
-#         temp_col = t1[:, i]  # 当前的一列
-#         nan_num = np.count_nonzero(temp_col != temp_col)
-#         if nan_num != 0:  # 不为0，说明当前这一列中有nan
-#             temp_not_nan_col = temp_col[temp_col == temp_col]  # 去掉nan的ndarray
-#  
-#             # 选中当前为nan的位置，把值赋值为不为nan的均值
-#             temp_col[np.isnan(temp_col)] = temp_not_nan_col.mean()  # mean()表示求均值。
-#     return t1
-# =============================================================================
-
-
-
-
-
-
 def process_names():
     global combined
     # we clean the Name variable
@@ -146,48 +101,31 @@ def process_names():
     combined.drop('Title', axis=1, inplace=True)
     return combined
 
-combined = process_names()
-
 def process_fares():
     global combined
     # there's one missing fare value - replacing it with the mean.
     combined.Fare.fillna(combined.iloc[:891].Fare.mean(), inplace=True)
     return combined
 
-combined = process_fares()
-
-
-
-
 def process_age(df):
     
-    # 把已有的数值型特征取出来丢进Random Forest Regressor中
-    age_df = df[['Age','Fare', 'Parch', 'SibSp', 'Pclass']]
-
-    # 乘客分成已知年龄和未知年龄两部分
+    age_df = df[['Age','Fare', 'Parch', 'SibSp', 'Pclass']]      
     known_age = age_df[age_df.Age.notnull()].iloc[:,:].values
+    
     unknown_age = age_df[age_df.Age.isnull()].iloc[:,:].values
 
-    # y即目标年龄
     y = known_age[:, 0]
 
-    # X即特征属性值
     X = known_age[:, 1:]
 
-    # fit到RandomForestRegressor之中
     rfr = RandomForestRegressor(random_state=0, n_estimators=2000, n_jobs=-1)
     rfr.fit(X, y)
     
-    # 用得到的模型进行未知年龄结果预测
     predictedAges = rfr.predict(unknown_age[:, 1::])
     
-    # 用得到的预测结果填补原缺失数据
     df.loc[ (df.Age.isnull()), 'Age' ] = predictedAges 
     
     return df
-
-
-combined = process_age(combined)
 
 def process_embarked():
     global combined
@@ -198,8 +136,6 @@ def process_embarked():
     combined = pd.concat([combined, embarked_dummies], axis=1)
     combined.drop('Embarked', axis=1, inplace=True)
     return combined
-
-combined = process_embarked()
 
 def process_cabin():
     global combined    
@@ -216,15 +152,11 @@ def process_cabin():
     combined.drop('Cabin', axis=1, inplace=True)
     return combined
 
-combined = process_cabin()
-
 def process_sex():
     global combined
     # mapping string values to numerical one 
     combined['Sex'] = combined['Sex'].map({'male':1, 'female':0})
     return combined
-
-combined = process_sex()
 
 def process_pclass():
     
@@ -239,8 +171,6 @@ def process_pclass():
     combined.drop('Pclass',axis=1,inplace=True)
     
     return combined
-
-combined = process_pclass()
 
 def cleanTicket(ticket):
     ticket = ticket.replace('.', '')
@@ -278,7 +208,6 @@ def process_ticket():
     combined.drop('Ticket', inplace=True, axis=1)
 
     return combined
-combined = process_ticket()
 
 def process_family():
     
@@ -293,12 +222,10 @@ def process_family():
     
     return combined
 
-combined = process_family()
-    
-
 def compute_score(clf, X, y, scoring='accuracy'):
     xval = cross_val_score(clf, X, y, cv = 5, scoring=scoring)
     return np.mean(xval)
+
 def recover_train_test_target():
     global combined
     
@@ -307,6 +234,24 @@ def recover_train_test_target():
     test = combined.iloc[891:]
     
     return train, test, targets
+
+
+
+  
+combined = get_combined_data()
+combined = get_titles()
+combined = process_names()
+combined = process_fares()
+combined = process_age(combined)
+combined = process_embarked()
+combined = process_cabin()
+combined = process_sex()
+combined = process_pclass()
+combined = process_ticket()
+combined = process_family()
+    
+
+
 train, test, targets = recover_train_test_target()
 
 clf = RandomForestClassifier(n_estimators=50, max_features='sqrt')
@@ -385,24 +330,22 @@ df_output['Survived'] = output
 df_output[['PassengerId','Survived']].to_csv('gridsearch_rf.csv', index=False)
     
     
-# =============================================================================
-# trained_models = []
-# for model in models:
-#     model.fit(train, targets)
-#     trained_models.append(model)
-# 
-# predictions = []
-# for model in trained_models:
-#     predictions.append(model.predict_proba(test)[:, 1])
-# 
-# predictions_df = pd.DataFrame(predictions).T
-# predictions_df['out'] = predictions_df.mean(axis=1)
-# predictions_df['PassengerId'] = aux['PassengerId']
-# predictions_df['out'] = predictions_df['out'].map(lambda s: 1 if s >= 0.5 else 0)
-# 
-# predictions_df = predictions_df[['PassengerId', 'out']]
-# predictions_df.columns = ['PassengerId', 'Survived']
-# 
-# predictions_df.to_csv('blending_base_models.csv', index=False)
-# =============================================================================
+trained_models = []
+for model in models:
+    model.fit(train, targets)
+    trained_models.append(model)
+
+predictions = []
+for model in trained_models:
+    predictions.append(model.predict_proba(test)[:, 1])
+
+predictions_df = pd.DataFrame(predictions).T
+predictions_df['out'] = predictions_df.mean(axis=1)
+predictions_df['PassengerId'] = aux['PassengerId']
+predictions_df['out'] = predictions_df['out'].map(lambda s: 1 if s >= 0.5 else 0)
+
+predictions_df = predictions_df[['PassengerId', 'out']]
+predictions_df.columns = ['PassengerId', 'Survived']
+
+predictions_df.to_csv('blending_base_models.csv', index=False)
     
